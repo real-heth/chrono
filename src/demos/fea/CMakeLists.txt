@@ -4,6 +4,8 @@ set(FEA_DEMOS
     demo_FEA_basic
     demo_FEA_dynamics
     demo_FEA_loads_statics
+    demo_helicopter_rotor_dynamics
+    demo_helicopter_rotor_test
 )
 
 # Add demos that require IRRLICHT run-time visualization
