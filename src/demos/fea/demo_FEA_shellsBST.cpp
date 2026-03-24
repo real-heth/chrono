@@ -48,16 +48,19 @@ int main(int argc, char* argv[]) {
     std::cout << "Copyright (c) 2017 projectchrono.org\nChrono version: " << CHRONO_VERSION << std::endl;
 
     // Select demo
+    std::string input;
+    int demo = 2;
     std::cout << "Demo options:" << std::endl;
     std::cout << "1  : single BSTshell element" << std::endl;
-    std::cout << "2  : rectangular mesh of BSTshell elements" << std::endl;
+    std::cout << "2  : rectangular mesh of BSTshell elements [DEFAULT]" << std::endl;
     std::cout << "3  : mesh of BSTshell elements intialized from OBJ file" << std::endl;
     std::cout << "\nSelect option (1, 2, or 3): ";
-
-    int demo = 1;
-    std::cin >> demo;
-    std::cout << std::endl;
-    ChClampValue(demo, 1, 3);
+    std::getline(std::cin, input);
+    if (!input.empty()) {
+        std::istringstream stream(input);
+        stream >> demo;
+        ChClampValue(demo, 1, 3);
+    }
 
     // Create (if needed) output directory
     const std::string out_dir = GetChronoOutputPath() + "FEA_SHELLS";
@@ -68,7 +71,7 @@ int main(int argc, char* argv[]) {
 
     // Create a Chrono physical system
     ChSystemSMC sys;
-
+    sys.SetGravityY();
     sys.SetNumThreads(std::min(4, ChOMP::GetNumProcs()), 0, 1);
 
     // Create a mesh, that is a container for groups
@@ -139,7 +142,7 @@ int main(int argc, char* argv[]) {
 
         // TEST
         sys.Setup();
-        sys.Update(false);
+        sys.Update(UpdateFlags::UPDATE_ALL & ~UpdateFlags::VISUAL_ASSETS);
         std::cout << "BST initial: \n"
                   << "Area: " << element->area << "\n"
                   << "l0: " << element->l0 << "\n"
@@ -150,7 +153,7 @@ int main(int argc, char* argv[]) {
         node1->SetPos(node1->GetPos() + ChVector3d(0.1, 0, 0));
         node1->SetFixed(true);
 
-        sys.Update(false);
+        sys.Update(UpdateFlags::UPDATE_ALL & ~UpdateFlags::VISUAL_ASSETS);
         ChVectorDynamic<double> Fi(element->GetNumCoordsPosLevel());
         element->ComputeInternalForces(Fi);
         std::cout << "BST updated: \n"
@@ -360,7 +363,7 @@ int main(int argc, char* argv[]) {
     // Simulation loop
     double timestep = 0.005;
     sys.Setup();
-    sys.Update(false);
+    sys.Update(UpdateFlags::UPDATE_ALL & ~UpdateFlags::VISUAL_ASSETS);
 
     ChFunctionInterp rec_X;
     ChFunctionInterp rec_Y;

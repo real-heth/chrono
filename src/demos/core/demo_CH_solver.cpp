@@ -132,7 +132,7 @@ void test_1(const std::string& out_dir) {
 
     // Output results
     double max_res, max_LCPerr;
-    mdescriptor.ComputeFeasabilityViolation(max_res, max_LCPerr);
+    mdescriptor.ComputeFeasibilityViolation(max_res, max_LCPerr);
 
     // If needed, dump the full system M and Cq matrices
     // on disk, in Matlab sparse format:
@@ -293,7 +293,7 @@ void test_3(const std::string& out_dir) {
 
     // Create two C++ objects representing 'constraints' between variables
     // and set the jacobian to random values;
-    // Also set cfm term (E diagonal = -cfm)
+    // Also set "compliance" cfm term in constraints, inverse of constr.stiffness (E diagonal = -cfm)
 
     ChConstraintTwoBodies mca(&mvarA, &mvarB);
     mca.SetRightHandSide(3);
@@ -340,8 +340,8 @@ void test_3(const std::string& out_dir) {
 
     mdescriptor.EndInsertion();  // ----- system description ends here
 
-    // Create the solver (MINRES) ...
-    ChSolverMINRES solver;
+    // Create a GMRES solver (note MINRES cannot be used now: constr.compliance cause negative E lower-right block) ...
+    ChSolverGMRES solver;
     solver.SetMaxIterations(100);
     solver.SetTolerance(1e-12);
     solver.EnableDiagonalPreconditioner(true);
@@ -452,7 +452,7 @@ void test_4(const std::string& out_dir) {
 
     // Print results
     double max_res, max_LCPerr;
-    mdescriptor.ComputeFeasabilityViolation(max_res, max_LCPerr);
+    mdescriptor.ComputeFeasibilityViolation(max_res, max_LCPerr);
 
     ChSparseMatrix matrM(mdescriptor.CountActiveVariables(), mdescriptor.CountActiveVariables());
     ChSparseMatrix matrCq(mdescriptor.CountActiveConstraints(), mdescriptor.CountActiveVariables());

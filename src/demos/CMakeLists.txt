@@ -181,11 +181,11 @@ if(CH_ENABLE_MODULE_VEHICLE AND CH_ENABLE_MODULE_VEHICLE_MODELS)
     endif()
 endif()
 
-if(CH_ENABLE_MODULE_FSI_SPH)
-    option(BUILD_DEMOS_FSI "Build demo programs for FSI_SPH module" TRUE)
+if(CH_ENABLE_MODULE_FSI)
+    option(BUILD_DEMOS_FSI "Build demo programs for FSI module" TRUE)
     mark_as_advanced(FORCE BUILD_DEMOS_FSI)
     if(BUILD_DEMOS_FSI)
-      add_subdirectory(fsi/sph)
+      add_subdirectory(fsi)
     endif()
 endif()
 
@@ -244,15 +244,16 @@ if(CH_ENABLE_MODULE_CSHARP)
        # Configure the standalone C# demo sub-build, forwarding the wrapper flag so
        # it knows when chrono_csharp_wrapper.dll should be referenced instead of raw .cs files
        add_custom_target(Csharp_demos ALL
-             COMMAND ${CMAKE_COMMAND} -S ${CMAKE_CURRENT_SOURCE_DIR}/csharp -B ${PROJECT_BINARY_DIR}/csharp
+             COMMAND ${CMAKE_COMMAND} -S ${CMAKE_CURRENT_SOURCE_DIR}/csharp -B ${PROJECT_BINARY_DIR}/demos_csharp
                  -DCMAKE_RUNTIME_OUTPUT_DIRECTORY:PATH=${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
                  -DCH_ENABLE_MODULE_VEHICLE:BOOL=${CH_ENABLE_MODULE_VEHICLE}
                  -DCH_ENABLE_MODULE_SENSOR:BOOL=${CH_ENABLE_MODULE_SENSOR}
                  -DCH_ENABLE_MODULE_POSTPROCESS:BOOL=${CH_ENABLE_MODULE_POSTPROCESS}
                  -DCH_ENABLE_MODULE_IRRLICHT:BOOL=${CH_ENABLE_MODULE_IRRLICHT}
                  -DCH_ENABLE_MODULE_VSG:BOOL=${CH_ENABLE_MODULE_VSG}
+                 -DCH_USE_OPENCRG:BOOL=${CH_USE_OPENCRG}
                  -DCH_USE_CSHARP_WRAPPER:BOOL=${CH_USE_CSHARP_WRAPPER}
-             COMMAND ${CMAKE_COMMAND} --build ${PROJECT_BINARY_DIR}/csharp --config $<CONFIG>)
+             COMMAND ${CMAKE_COMMAND} --build ${PROJECT_BINARY_DIR}/demos_csharp --config $<CONFIG>)
        add_dependencies(Csharp_demos Chrono_csharp_core)
        add_dependencies(Csharp_demos Chrono_csharp_robot)
        if(CH_USE_CSHARP_WRAPPER)

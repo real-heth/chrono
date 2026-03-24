@@ -46,7 +46,7 @@
 #include "chrono_vehicle/terrain/RigidTerrain.h"
 
 #include "chrono_vehicle/terrain/SCMTerrain.h"
-#if defined(SWIGCSHARP) && defined(HAVE_OPENCRG)
+#if defined(SWIGCSHARP) && defined(CHRONO_HAS_OPENCRG)
     #include "chrono_vehicle/terrain/CRGTerrain.h"
 #endif
 
@@ -70,7 +70,7 @@
 %import "chrono_swig/interface/core/ChBody.i"
 %import "chrono_swig/interface/core/ChNodeXYZ.i"
 %import "chrono_swig/interface/core/ChLoadContainer.i"
-%import "../../../chrono/assets/ChVisualShapeTriangleMesh.h"
+%import "chrono_swig/interface/core/ChVisualShape.i"
 #endif
 
 #ifdef SWIGPYTHON
@@ -84,7 +84,7 @@
 %import(module = "pychrono.core") "chrono_swig/interface/core/ChBody.i"
 %import(module = "pychrono.core") "chrono_swig/interface/core/ChNodeXYZ.i"
 %import(module = "pychrono.core") "chrono_swig/interface/core/ChLoadContainer.i"
-%import(module = "pychrono.core") "../../../chrono/assets/ChVisualShapeTriangleMesh.h"
+%import(module = "pychrono.core") "chrono_swig/interface/core/ChVisualShape.i"
 #endif
 
 %shared_ptr(chrono::vehicle::ChTerrain)
@@ -101,7 +101,7 @@
 #endif
 #endif             // --------------------------------------------------------------------- PYTHON
 
-#if defined(SWIGCSHARP) && defined(HAVE_OPENCRG)
+#if defined(SWIGCSHARP) && defined(CHRONO_HAS_OPENCRG)
 %shared_ptr(chrono::vehicle::CRGTerrain)
 #endif
 
@@ -109,13 +109,14 @@
 %template(ChSCMTerrainNodeLevel) std::pair<chrono::ChVector2i, double>;
 %template(ChSCMTerrainNodeLevelList) std::vector<std::pair<chrono::ChVector2i, double>>; // To support SCMTerrain::Get/SetModifiedNodes
 
+%feature("director") chrono::vehicle::ChTerrain;
+%feature("director") chrono::vehicle::SCMTerrain::SoilParametersCallback;
+
 // Parse the header file to generate wrappers
 %include "../../../chrono_vehicle/ChTerrain.h"    
 %include "../../../chrono_vehicle/terrain/FlatTerrain.h"
 %include "../../../chrono_vehicle/terrain/RigidTerrain.h"
 
-%feature("director") chrono::vehicle::ChTerrain;
-%feature("director") SoilParametersCallback;
 %include "cpointer.i"
 %pointer_functions(int, intp)
 %pointer_functions(double, doublep)
@@ -123,10 +124,15 @@
 
 #ifdef SWIGPYTHON  // --------------------------------------------------------------------- PYTHON
 #ifdef CHRONO_FSI_SPH
+
+// Allow calling Advance from Python without holding the GIL
+// Check https://github.com/projectchrono/chrono/issues/688 for details
+%threadallow chrono::vehicle::CRMTerrain::Advance; 
+
 %include "../../../chrono_vehicle/terrain/CRMTerrain.h"
 #endif
 #endif             // --------------------------------------------------------------------- PYTHON
 
-#if defined(SWIGCSHARP) && defined(HAVE_OPENCRG)
+#if defined(SWIGCSHARP) && defined(CHRONO_HAS_OPENCRG)
 %include "../../../chrono_vehicle/terrain/CRGTerrain.h"
 #endif

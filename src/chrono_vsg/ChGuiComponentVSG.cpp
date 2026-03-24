@@ -56,8 +56,8 @@ void ChGuiComponentVSG::Colorbar(vsg::ref_ptr<vsgImGui::Texture> texture,
 
     ImGui::PushItemWidth(item_width);
     if (bimodal) {
-        // so that the colourbar labels line up with the pressure shader modes in the VSG shader without drift
-        // from the zero point - lining them up symettrically
+        // so that the colorbar labels line up with the pressure shader modes in the VSG shader without drift
+        // from the zero point - lining them up symmetrically
         const int half = (num_items - 1) / 2;
         float delta_neg = (0 - min_val) / half;
         for (int i = 0; i <= half; i++) {
@@ -85,6 +85,16 @@ void ChGuiComponentVSG::Colorbar(vsg::ref_ptr<vsgImGui::Texture> texture,
         }
     }
     ImGui::PopItemWidth();
+}
+
+void ChGuiComponentVSG::HelpMarker(const char* desc) {
+    ImGui::TextDisabled("(?)");
+    if (ImGui::BeginItemTooltip()) {
+        ImGui::PushTextWrapPos(ImGui::GetFontSize() * 35.0f);
+        ImGui::TextUnformatted(desc);
+        ImGui::PopTextWrapPos();
+        ImGui::EndTooltip();
+    }
 }
 
 }  // namespace vsg3d

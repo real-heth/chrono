@@ -29,22 +29,21 @@ class ChDirectSolverLS;
 /// @addtogroup chrono_solver
 /// @{
 
-/// Base class for all Chrono solvers (for linear problems or complementarity problems). \n
-/// See ChSystemDescriptor for more information about the problem formulation and the data structures passed to the
-/// solver.
+/// Base class for all Chrono solvers (for linear problems or complementarity problems).
+/// See ChSystemDescriptor for more information about the problem formulation and the solver data structures.
 class ChApi ChSolver {
   public:
     /// Available types of solvers.
     enum class Type {
         // Iterative VI solvers
         PSOR,             ///< Projected SOR (Successive Over-Relaxation)
-        PSSOR,            ///< Projected symmetric SOR
+        PSSOR,            ///< Projected symmetric SOR (removed, falls back to PSOR)
         PJACOBI,          ///< Projected Jacobi
-        PMINRES,          ///< Projected MINRES
+        PMINRES,          ///< Projected MINRES (removed, falls back to MINRES)
         BARZILAIBORWEIN,  ///< Barzilai-Borwein
         APGD,             ///< Accelerated Projected Gradient Descent
         ADMM,             ///< Alternating Direction Method of Multipliers
-        // Direct linear solvers
+        // Direct sparse linear solvers
         SPARSE_LU,    ///< Sparse supernodal LU factorization
         SPARSE_QR,    ///< Sparse left-looking rank-revealing QR factorization
         PARDISO_MKL,  ///< Pardiso MKL (super-nodal sparse direct solver)
@@ -86,13 +85,18 @@ class ChApi ChSolver {
     /// The argument `analyze` indicates if a full analysis of the system matrix is required. This is true when a
     /// structural change in the system was detected (e.g., when a physical component was added to or removed from the
     /// Chrono system).
-    /// This function must return true if successfull and false otherwise.
+    /// This function must return true if successful and false otherwise.
     virtual bool Setup(ChSystemDescriptor& sysd, bool analyze) { return true; }
 
     /// Solve the linear system.
     /// The system descriptor contains the constraints and variables.
     /// The return value is specific to a derived solver class.
     virtual double Solve(ChSystemDescriptor& sysd) = 0;
+
+    /// Set the matrix conditioning factor (default: 1).
+    /// A concrete solver can use this scaling factor to improve conditioning of the system matrix by scaling the
+    /// generalized mass matrix block.
+    void SetConditioningFactor(double factor) { conditioning_factor = factor; }
 
     /// Set verbose output from solver.
     void SetVerbose(bool mv) { verbose = mv; }
@@ -110,10 +114,12 @@ class ChApi ChSolver {
     std::string GetTypeAsString() const { return GetTypeAsString(GetType()); }
 
     /// Return the provided solver type as a string.
-    static std::string GetTypeAsString(Type type); 
+    static std::string GetTypeAsString(Type type);
 
   protected:
-    ChSolver() : verbose(false) {}
+    ChSolver() : verbose(false), conditioning_factor(1) {}
+
+    double conditioning_factor;
 
     bool verbose;
     bool write_matrix;

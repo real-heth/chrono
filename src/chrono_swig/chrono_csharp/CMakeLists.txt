@@ -75,19 +75,25 @@ if(CH_ENABLE_MODULE_FSI_SPH)
   set(CMAKE_SWIG_FLAGS "${CMAKE_SWIG_FLAGS};-DCHRONO_FSI_SPH")
 endif()
 
-if(CH_ENABLE_MODULE_PARSERS AND HAVE_URDF)
-  set(CMAKE_SWIG_FLAGS "${CMAKE_SWIG_FLAGS};-DCHRONO_PARSERS_URDF")
+if(CH_ENABLE_MODULE_PARSERS)
+  set(CMAKE_SWIG_FLAGS "${CMAKE_SWIG_FLAGS};-DCHRONO_PARSERS")
+  if(CH_USE_URDF)
+    set(CMAKE_SWIG_FLAGS "${CMAKE_SWIG_FLAGS};-DCHRONO_HAS_URDF")
+  endif()
 endif()
 
 if(CH_ENABLE_MODULE_SENSOR)
   set(CMAKE_SWIG_FLAGS "${CMAKE_SWIG_FLAGS};-DCHRONO_SENSOR")
   if(CH_USE_SENSOR_OPTIX)
-    set(CMAKE_SWIG_FLAGS "${CMAKE_SWIG_FLAGS};-DCHRONO_OPTIX")
+    set(CMAKE_SWIG_FLAGS "${CMAKE_SWIG_FLAGS};-DCHRONO_HAS_OPTIX")
   endif()
 endif()
 
-if(CH_ENABLE_MODULE_VEHICLE AND HAVE_OPENCRG)
-  set(CMAKE_SWIG_FLAGS "${CMAKE_SWIG_FLAGS};-DHAVE_OPENCRG")
+if(CH_ENABLE_MODULE_VEHICLE)
+  set(CMAKE_SWIG_FLAGS "${CMAKE_SWIG_FLAGS};-DCHRONO_VEHICLE")
+  if(CH_USE_OPENCRG)
+    set(CMAKE_SWIG_FLAGS "${CMAKE_SWIG_FLAGS};-DCHRONO_HAS_OPENCRG")
+  endif()
 endif()
 
 #-----------------------------------------------------------------------------
@@ -400,7 +406,7 @@ if(CH_ENABLE_MODULE_VEHICLE AND CH_ENABLE_MODULE_VEHICLE_MODELS)
   if(MSVC)
     set_source_files_properties(${INTERFACE_FILE_VEHICLE} PROPERTIES COMPILE_OPTIONS "-w401,503,833")
   endif()
-  
+
   # Create the SWIG module.
   swig_add_library(Chrono_csharp_vehicle LANGUAGE csharp SOURCES ${INTERFACE_FILE_VEHICLE})
   target_link_libraries(Chrono_csharp_vehicle PRIVATE Chrono_core Chrono_vehicle ChronoModels_vehicle)
@@ -433,8 +439,8 @@ if(CH_ENABLE_MODULE_VEHICLE AND CH_ENABLE_MODULE_VEHICLE_MODELS)
                         )
   
   target_compile_definitions(Chrono_csharp_vehicle PRIVATE "CH_IGNORE_DEPRECATED")
-  if (HAVE_OPENCRG)
-    target_compile_definitions(Chrono_csharp_vehicle PRIVATE "HAVE_OPENCRG")
+  if (CH_USE_OPENCRG)
+    target_compile_definitions(Chrono_csharp_vehicle PRIVATE "CHRONO_HAS_OPENCRG")
   endif()
   
   add_dependencies(Chrono_csharp_vehicle Chrono_core Chrono_vehicle ChronoModels_vehicle)
@@ -507,7 +513,7 @@ if(CH_ENABLE_MODULE_SENSOR)
   target_compile_definitions(Chrono_csharp_sensor PRIVATE "CH_IGNORE_DEPRECATED")
   target_compile_definitions(Chrono_csharp_sensor PRIVATE "IGNORE_DEPRECATED_WARNING")
   if (CH_USE_SENSOR_OPTIX)
-    target_compile_definitions(Chrono_csharp_sensor PRIVATE "CHRONO_OPTIX")
+    target_compile_definitions(Chrono_csharp_sensor PRIVATE "CHRONO_HAS_OPTIX")
   endif()
 
   add_dependencies(Chrono_csharp_sensor Chrono_core)
@@ -623,6 +629,10 @@ if(CH_ENABLE_MODULE_ROS)
 
   target_compile_definitions(Chrono_csharp_ros PRIVATE "CH_IGNORE_DEPRECATED")
   target_compile_definitions(Chrono_csharp_ros PRIVATE "IGNORE_DEPRECATED_WARNING")
+
+  if (CH_USE_SENSOR_OPTIX)
+    target_compile_definitions(Chrono_csharp_ros PRIVATE "CHRONO_HAS_OPTIX")
+  endif()
 
   add_dependencies(Chrono_csharp_ros Chrono_core)
   add_dependencies(Chrono_csharp_ros Chrono_ros)
@@ -808,6 +818,8 @@ if(CH_USE_CSHARP_WRAPPER)
             -DCORE_SOURCE_DIR=${CHRONO_CSHARP_CORE_SOURCE_DIR}
             -DMODULE_SOURCE_DIRS=${_chrono_csharp_module_dirs_arg}
             -P ${CHRONO_CSHARP_COLLECT_SCRIPT}
+    # Wipe the output dir to ensure old files don't cause issues
+    COMMAND ${CMAKE_COMMAND} -E rm -rf "${CHRONO_CSHARP_WRAPPER_ROOT}/obj"
     COMMAND ${CMAKE_COMMAND} -E make_directory "${CHRONO_CSHARP_WRAPPER_OUTPUT_ROOT}/$<CONFIG>"
     COMMAND ${DOTNET_EXE} publish ${CHRONO_CSHARP_WRAPPER_PROJECT}
             --configuration $<CONFIG>

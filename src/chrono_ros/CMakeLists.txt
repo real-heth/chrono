@@ -45,6 +45,21 @@ else()
   return()
 endif()
 
+# ROS2 with FastDDS as the RMW middleware may pull in fastcdr/fastrtps as
+# imported targets scoped to this directory. Promote them to IMPORTED_GLOBAL so
+# that consumers of Chrono_ros (e.g. the Python SWIG ros module) can evaluate
+# generator expressions, see Fast-CDR#251
+# Skip targets that are already global (e.g. promoted by Chrono::SynChrono).
+foreach(_dds_target IN ITEMS fastcdr fastrtps foonathan_memory foonathan_memory_node_size_debugger eProsima_atomic)
+  if(TARGET ${_dds_target})
+    get_property(_already_global TARGET ${_dds_target} PROPERTY IMPORTED_GLOBAL)
+    if(NOT _already_global)
+      set_property(TARGET ${_dds_target} PROPERTY IMPORTED_GLOBAL TRUE)
+    endif()
+  endif()
+endforeach()
+unset(_dds_target)
+
 # Set list of ROS2 targets
 set(ROS2_TARGETS 
     rclcpp::rclcpp
@@ -151,10 +166,6 @@ source_group("vehicle_handler" FILES ${CH_ROS_VEHICLE_HANDLER_FILES})
 set(CH_ROS_SENSOR_HANDLER_FILES "")
 if (CH_ENABLE_MODULE_SENSOR)
   set(CH_ROS_SENSOR_HANDLER_FILES
-    handlers/sensor/ChROSCameraHandler.h
-    handlers/sensor/ChROSCameraHandler.cpp
-    handlers/sensor/ChROSLidarHandler.h
-    handlers/sensor/ChROSLidarHandler.cpp
     handlers/sensor/ChROSAccelerometerHandler.h
     handlers/sensor/ChROSAccelerometerHandler.cpp
     handlers/sensor/ChROSGyroscopeHandler.h
@@ -169,8 +180,25 @@ if (CH_ENABLE_MODULE_SENSOR)
     handlers/sensor/ChROSSensorHandlerUtilities.h
     handlers/sensor/ChROSSensorHandlerUtilities.cpp
   )
+  if(CH_USE_SENSOR_OPTIX)
+    set(CH_ROS_SENSOR_HANDLER_FILES ${CH_ROS_SENSOR_HANDLER_FILES}
+      handlers/sensor/ChROSCameraHandler.h
+      handlers/sensor/ChROSCameraHandler.cpp
+      handlers/sensor/ChROSLidarHandler.h
+      handlers/sensor/ChROSLidarHandler.cpp
+    )
+  endif()
 endif()
 source_group("sensor_handler" FILES ${CH_ROS_SENSOR_HANDLER_FILES})
+
+set(CH_ROS_MBS_HANDLER_FILES
+  handlers/mbs/ChROSHydraulicCraneHandler_ipc.h
+  handlers/mbs/ChROSCraneStateHandler.h
+  handlers/mbs/ChROSCraneStateHandler.cpp
+  handlers/mbs/ChROSActuatorStateHandler.h
+  handlers/mbs/ChROSActuatorStateHandler.cpp
+)
+source_group("mbs_handler" FILES ${CH_ROS_MBS_HANDLER_FILES})
 
 set(CH_ROS_ROBOT_HANDLER_FILES
   handlers/robot/ChROSRobotModelHandler.h
@@ -195,7 +223,7 @@ endif()
 if(CH_ENABLE_MODULE_SENSOR)
   list (APPEND DEPENDENCIES_ROS "SENSOR")
 endif()
-if(CH_ENABLE_MODULE_PARSERS  AND HAVE_URDF)
+if(CH_ENABLE_MODULE_PARSERS  AND CH_USE_URDF)
   list (APPEND DEPENDENCIES_ROS "PARSERS")
 endif()
 
@@ -211,6 +239,7 @@ add_library(Chrono_ros SHARED
             ${CH_ROS_HANDLER_FILES}
             ${CH_ROS_VEHICLE_HANDLER_FILES}
             ${CH_ROS_SENSOR_HANDLER_FILES}
+            ${CH_ROS_MBS_HANDLER_FILES}
             ${CH_ROS_ROBOT_HANDLER_FILES}
 )
 add_library(Chrono::ros ALIAS Chrono_ros)
@@ -260,8 +289,7 @@ if (CH_ENABLE_MODULE_SENSOR)
   target_link_libraries(Chrono_ros PUBLIC Chrono_sensor)
 endif()
 
-if (CH_ENABLE_MODULE_PARSERS AND HAVE_URDF)
-  target_compile_definitions(Chrono_ros PUBLIC CHRONO_PARSERS_URDF)
+if (CH_ENABLE_MODULE_PARSERS AND CH_USE_URDF)
   target_link_libraries(Chrono_ros PUBLIC Chrono_parsers)
 endif()
 
@@ -320,6 +348,8 @@ target_sources(chrono_ros_node PRIVATE
     handlers/sensor/ChROSIMUHandler_ros.cpp
     handlers/sensor/ChROSGPSHandler_ros.cpp
     handlers/robot/ChROSRobotModelHandler_ros.cpp
+    handlers/mbs/ChROSCraneStateHandler_ros.cpp
+    handlers/mbs/ChROSActuatorStateHandler_ros.cpp
 )
 
 target_include_directories(chrono_ros_node PRIVATE 

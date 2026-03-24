@@ -107,7 +107,6 @@ set(Chrono_Multicore_PHYSICS
 source_group(physics FILES ${Chrono_Multicore_PHYSICS})
     
 set(Chrono_Multicore_SOLVER
-    solver/ChSystemDescriptorMulticore.h
     solver/ChIterativeSolverMulticore.h
     solver/ChIterativeSolverMulticore.cpp
     solver/ChIterativeSolverMulticoreNSC.cpp
@@ -213,6 +212,6 @@ install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/
         DESTINATION include/chrono_multicore
         FILES_MATCHING PATTERN "*.h")
 
-# Install files for chrono-config (in both build and install trees)
+# Install files for ChronoConfig (in both build and install trees)
 file(COPY ${CMAKE_SOURCE_DIR}/cmake/FindBlaze.cmake DESTINATION ${CMAKE_BINARY_DIR}/cmake/)
 install(FILES "${CMAKE_SOURCE_DIR}/cmake/FindBlaze.cmake" DESTINATION ${CH_CONFIG_INSTALL_PATH})

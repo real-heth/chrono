@@ -27,11 +27,16 @@ namespace chrono {
 
 // -----------------------------------------------------------------------------
 
-/// Added mass blocks for a set of ChBody.
-/// The block associated with each body must have size 6 x 6n, where n is the number of all "hydrodynamic" bodies
-/// (i.e., the size of the map). For each body in the set, its n associated 6x6 blocks must follow the same order
-/// as the bodies in the set.
-using ChBodyAddedMassBlocks = std::unordered_map<std::shared_ptr<ChBody>, ChMatrixDynamic<>>;
+/// Added mass block for a ChBody.
+/// The block associated with each body must have size 6 x 6n, where n is the number of all "hydrodynamic" bodies.
+struct ChBodyAddedMassBlock {
+    std::shared_ptr<ChBody> body;
+    ChMatrixDynamic<> block;
+};
+
+/// A collection of 'n' added mass blocks.
+/// For each body in such a vector, its 'n' associated 6x6 blocks must follow the same order as the bodies in the set.
+using ChBodyAddedMassBlocks = std::vector<ChBodyAddedMassBlock>;
 
 /// Added mass for hydrodynamic loads.
 /// The added mass is an inertia added to the system due to accelerating bodies having to displace some volume of
@@ -58,7 +63,7 @@ class ChApi ChLoadHydrodynamics : public ChPhysicsItem {
     /// Perform any updates necessary at the current phase during the solution process.
     /// This function is called at least once per step to update auxiliary data, internal states, etc.
     /// If a problem size is detected, resize the underlying KRM block.
-    virtual void Update(double time, bool update_assets) override;
+    virtual void Update(double time, UpdateFlags update_flags) override;
 
     /// Increment the given residual vector R with the term c * M * w (for the entire system).
     virtual void IntLoadResidual_Mv(const unsigned int off,      ///< offset in R residual

@@ -389,7 +389,7 @@ void ChFsiFluidSystemSPH::CheckSPHParameters() {
         cerr << "WARNING: Kernel interaction radius multiplier is greater than 1.5 and the cubic spline kernel is "
                 "used. This may lead to pairing instability. See Pg 10. of Ha H.Bui et al. Smoothed particle "
                 "hydrodynamics (SPH) and its applications in geomechanics : From solid fracture to granular "
-                "behaviour and multiphase flows in porous media. You might want to switch to the Wendland kernel."
+                "behavior and multiphase flows in porous media. You might want to switch to the Wendland kernel."
              << endl;
     }
 
@@ -1578,9 +1578,9 @@ void ChFsiFluidSystemSPH::Initialize(const std::vector<FsiBodyState>& body_state
 }
 
 //------------------------------------------------------------------------------
-double ChFsiFluidSystemSPH::GetVariableStepSize() {
+double ChFsiFluidSystemSPH::GetCurrentStepSize() {
     // Variable time step requires the state from the previous time step.
-    // Thus, it cannot directly be used in the frist time step.
+    // Thus, it cannot directly be used in the first time step.
     if (m_paramsH->use_variable_time_step && m_frame != 0) {
         return m_fluid_dynamics->computeTimeStep();
     } else {

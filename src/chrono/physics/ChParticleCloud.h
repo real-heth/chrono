@@ -211,7 +211,7 @@ class ChApi ChParticleCloud : public ChIndexedParticles {
 
     /// Add a collision shape for particles in this cloud.
     /// If a collision model does not already exist, it is first created.
-    /// The resulting model witll be the "template" collision model that is used by all particles.
+    /// The resulting model will be the "template" collision model that is used by all particles.
     void AddCollisionShape(std::shared_ptr<ChCollisionShape> shape, const ChFrame<>& frame = ChFrame<>());
 
     /// Resize the particle cluster.
@@ -278,7 +278,7 @@ class ChApi ChParticleCloud : public ChIndexedParticles {
                                  const unsigned int off_v,
                                  const ChStateDelta& v,
                                  const double T,
-                                 bool full_update) override;
+                                 UpdateFlags update_flags) override;
     virtual void IntStateGatherAcceleration(const unsigned int off_a, ChStateDelta& a) override;
     virtual void IntStateScatterAcceleration(const unsigned int off_a, const ChStateDelta& a) override;
     virtual void IntStateIncrement(const unsigned int off_x,
@@ -387,7 +387,7 @@ class ChApi ChParticleCloud : public ChIndexedParticles {
     float GetSleepMinAngVel() const { return sleep_minwvel; }
 
     /// Update all auxiliary data of the particles
-    virtual void Update(double time, bool update_assets) override;
+    virtual void Update(double time, UpdateFlags update_flags) override;
 
     virtual void ArchiveOut(ChArchiveOut& archive_out) override;
     virtual void ArchiveIn(ChArchiveIn& archive_in) override;

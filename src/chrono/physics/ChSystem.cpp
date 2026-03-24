@@ -31,9 +31,7 @@
 #include "chrono/solver/ChSolverAPGD.h"
 #include "chrono/solver/ChSolverBB.h"
 #include "chrono/solver/ChSolverPJacobi.h"
-#include "chrono/solver/ChSolverPMINRES.h"
 #include "chrono/solver/ChSolverPSOR.h"
-#include "chrono/solver/ChSolverPSSOR.h"
 #include "chrono/solver/ChIterativeSolverLS.h"
 #include "chrono/solver/ChDirectSolverLS.h"
 #include "chrono/utils/ChProfiler.h"
@@ -73,6 +71,9 @@ ChSystem::ChSystem(const std::string& name)
       nthreads_collision(1),
       applied_forces_current(false) {
     assembly.system = this;
+
+    // Set the system descriptor
+    descriptor = chrono_types::make_shared<ChSystemDescriptor>();
 
     // Set default collision envelope and margin
     ChCollisionModel::SetDefaultSuggestedEnvelope(0.03);
@@ -269,20 +270,12 @@ void ChSystem::SetSolverType(ChSolver::Type type) {
     if (type == ChSolver::Type::CUSTOM)
         return;
 
-    descriptor = chrono_types::make_shared<ChSystemDescriptor>();
-
     switch (type) {
         case ChSolver::Type::PSOR:
             solver = chrono_types::make_shared<ChSolverPSOR>();
             break;
-        case ChSolver::Type::PSSOR:
-            solver = chrono_types::make_shared<ChSolverPSSOR>();
-            break;
         case ChSolver::Type::PJACOBI:
             solver = chrono_types::make_shared<ChSolverPJacobi>();
-            break;
-        case ChSolver::Type::PMINRES:
-            solver = chrono_types::make_shared<ChSolverPMINRES>();
             break;
         case ChSolver::Type::BARZILAIBORWEIN:
             solver = chrono_types::make_shared<ChSolverBB>();
@@ -296,11 +289,22 @@ void ChSystem::SetSolverType(ChSolver::Type type) {
         case ChSolver::Type::MINRES:
             solver = chrono_types::make_shared<ChSolverMINRES>();
             break;
+        case ChSolver::Type::BICGSTAB:
+            solver = chrono_types::make_shared<ChSolverBiCGSTAB>();
+            break;
         case ChSolver::Type::SPARSE_LU:
             solver = chrono_types::make_shared<ChSolverSparseLU>();
             break;
         case ChSolver::Type::SPARSE_QR:
             solver = chrono_types::make_shared<ChSolverSparseQR>();
+            break;
+        case ChSolver::Type::PSSOR:
+            std::cerr << "\n\nWARNING: The PSSOR solver was removed. Falling back to PSOR\n\n" << std::endl;
+            solver = chrono_types::make_shared<ChSolverPSOR>();
+            break;
+        case ChSolver::Type::PMINRES:
+            std::cerr << "\n\nWARNING: The PMINRES solver was removed. Falling back to MINRES\n\n" << std::endl;
+            solver = chrono_types::make_shared<ChSolverMINRES>();
             break;
         default:
             std::cout << "Unknown solver type. No solver was set." << std::endl;
@@ -618,6 +622,10 @@ bool ChSystem::ManageSleepingBodies() {
 //  DESCRIPTOR BOOKKEEPING
 // -----------------------------------------------------------------------------
 
+void ChSystem::DescriptorPrepareInject() {
+    DescriptorPrepareInject(*descriptor);
+}
+
 void ChSystem::DescriptorPrepareInject(ChSystemDescriptor& sys_descriptor) {
     sys_descriptor.BeginInsertion();  // This resets the vectors of constr. and var. pointers.
 
@@ -713,12 +721,12 @@ void ChSystem::Setup() {
 // - updates all forces  (automatic, as children of bodies)
 // - updates all markers (automatic, as children of bodies).
 
-void ChSystem::Update(double time, bool update_assets) {
+void ChSystem::Update(double time, UpdateFlags update_flags) {
     ch_time = time;
-    Update(update_assets);
+    Update(update_flags);
 }
 
-void ChSystem::Update(bool update_assets) {
+void ChSystem::Update(UpdateFlags update_flags) {
     CH_PROFILE("Update");
 
     Initialize();
@@ -726,13 +734,13 @@ void ChSystem::Update(bool update_assets) {
     timer_update.start();  // Timer for profiling
 
     // Update underlying assembly (recursively update sub objects bodies, links, etc)
-    assembly.Update(ch_time, update_assets);
+    assembly.Update(ch_time, update_flags);
 
     // Update all contacts, if any
-    contact_container->Update(ch_time, update_assets);
+    contact_container->Update(ch_time, update_flags);
 
     // Update any attached visualization system only when also updating assets
-    if (visual_system && update_assets)
+    if (visual_system && has_flag(update_flags, UpdateFlags::VISUAL_ASSETS))
         visual_system->OnUpdate(this);
 
     timer_update.stop();
@@ -932,20 +940,20 @@ void ChSystem::StateGather(ChState& x, ChStateDelta& v, double& T) {
 }
 
 // From state Y={x,v} to system.
-void ChSystem::StateScatter(const ChState& x, const ChStateDelta& v, const double T, bool full_update) {
+void ChSystem::StateScatter(const ChState& x, const ChStateDelta& v, const double T, UpdateFlags update_flags) {
     unsigned int off_x = 0;
     unsigned int off_v = 0;
 
     // Let each object (bodies, links, etc.) in the assembly extract its own states.
     // Note that each object also performs an update
-    assembly.IntStateScatter(off_x, x, off_v, v, T, full_update);
+    assembly.IntStateScatter(off_x, x, off_v, v, T, update_flags);
 
     // Use also on contact container:
     unsigned int displ_x = off_x - assembly.offset_x;
     unsigned int displ_v = off_v - assembly.offset_w;
     contact_container->IntStateScatter(displ_x + contact_container->GetOffset_x(), x,  //
                                        displ_v + contact_container->GetOffset_w(), v,  //
-                                       T, full_update);
+                                       T, update_flags);
 
     ch_time = T;
 }
@@ -1025,26 +1033,25 @@ void ChSystem::StateIncrementX(ChState& x_new, const ChState& x, const ChStateDe
 //  |-Dl|   [ Cq  0   ]      |-Qc|
 // for given residuals R and -Qc, and  H = [ c_a*M + c_v*dF/dv + c_x*dF/dx ]
 // This function returns true if successful and false otherwise.
-bool ChSystem::StateSolveCorrection(
-    ChStateDelta& Dv,             // result: computed Dv
-    ChVectorDynamic<>& Dl,        // result: computed Dl Lagrange multipliers
-    const ChVectorDynamic<>& R,   // the R residual
-    const ChVectorDynamic<>& Qc,  // the Qc residual
-    const double c_a,             // the factor in c_a*M
-    const double c_v,             // the factor in c_v*dF/dv
-    const double c_x,             // the factor in c_x*dF/dx
-    const ChState& x,             // current state, x part
-    const ChStateDelta& v,        // current state, v part
-    const double T,               // current time T
-    bool force_state_scatter,     // if false, x,v and T are not scattered to the system
-    bool full_update,             // if true, perform a full update during scatter
-    bool call_setup,              // if true, call the solver's Setup() function
-    bool call_analyze             // if true, call the solver's Setup analyze phase
+bool ChSystem::StateSolveCorrection(ChStateDelta& Dv,             // result: computed Dv
+                                    ChVectorDynamic<>& Dl,        // result: computed Dl Lagrange multipliers
+                                    const ChVectorDynamic<>& R,   // the R residual
+                                    const ChVectorDynamic<>& Qc,  // the Qc residual
+                                    const double c_a,             // the factor in c_a*M
+                                    const double c_v,             // the factor in c_v*dF/dv
+                                    const double c_x,             // the factor in c_x*dF/dx
+                                    const ChState& x,             // current state, x part
+                                    const ChStateDelta& v,        // current state, v part
+                                    const double T,               // current time T
+                                    bool force_state_scatter,     // if false, x,v and T are not scattered to the system
+                                    UpdateFlags update_flags,     // if true, perform a full update during scatter
+                                    bool call_setup,              // if true, call the solver's Setup() function
+                                    bool call_analyze             // if true, call the solver's Setup analyze phase
 ) {
     CH_PROFILE("StateSolveCorrection");
 
     if (force_state_scatter)
-        StateScatter(x, v, T, full_update);
+        StateScatter(x, v, T, update_flags);
 
     // R and Qc vectors  --> solver sparse solver structures  (also sets Dl and Dv to warmstart)
     IntToDescriptor(0, Dv, R, 0, Dl, Qc);
@@ -1396,7 +1403,7 @@ void ChSystem::WriteSystemMatrices(bool save_M,
                                    const std::string& path,
                                    bool one_indexed) {
     // Prepare lists of variables and constraints, if not already prepared.
-    DescriptorPrepareInject(*descriptor);
+    DescriptorPrepareInject();
 
     if (save_M) {
         ChSparseMatrix mM;
@@ -1432,8 +1439,8 @@ void ChSystem::WriteSystemMatrices(bool save_M,
 unsigned int ChSystem::RemoveRedundantConstraints(bool remove_links, double qr_tol, bool verbose) {
     // Setup system descriptor
     Setup();
-    Update(false);
-    DescriptorPrepareInject(*descriptor);
+    Update(UpdateFlags::UPDATE_ALL & ~UpdateFlags::VISUAL_ASSETS);
+    DescriptorPrepareInject();
 
     ChSparseMatrix Cq;
     Cq.resize(descriptor->CountActiveConstraints(), descriptor->CountActiveVariables());
@@ -1444,7 +1451,7 @@ unsigned int ChSystem::RemoveRedundantConstraints(bool remove_links, double qr_t
     ChSparseMatrix CqT = Cq.transpose();
     CqT.makeCompressed();
 
-    // Perform QR decomposition on Cq to identify linearly-dependant rows (ie. redundant scalar constraint equations)
+    // Perform QR decomposition on Cq to identify linearly-dependent rows (ie. redundant scalar constraint equations)
     Eigen::SparseQR<ChSparseMatrix, Eigen::COLAMDOrdering<int>> QR_dec;
     QR_dec.compute(CqT);
 
@@ -1532,7 +1539,7 @@ unsigned int ChSystem::RemoveRedundantConstraints(bool remove_links, double qr_t
         }
     }
 
-    // Modify ChLinkMate constaints based on new mask
+    // Modify ChLinkMate constraints based on new mask
     for (auto constrnewmask_it = constrnewmask_map.begin(); constrnewmask_it != constrnewmask_map.end();
          ++constrnewmask_it) {
         std::dynamic_pointer_cast<ChLinkMateGeneric>(constr_map[constrnewmask_it->first])
@@ -1544,8 +1551,8 @@ unsigned int ChSystem::RemoveRedundantConstraints(bool remove_links, double qr_t
     // IMPORTANT: by modifying the mask of ChLinkMate, the underlying ChConstraints get deleted and offsets get
     // scrambled. Therefore, repopulate ChSystemDescriptor with updated scenario
     Setup();
-    Update(false);
-    DescriptorPrepareInject(*descriptor);
+    Update(UpdateFlags::UPDATE_ALL & ~UpdateFlags::VISUAL_ASSETS);
+    DescriptorPrepareInject();
 
     if (verbose) {
         std::cout << "   New number of constraints: " << GetSystemDescriptor()->CountActiveConstraints() << std::endl;
@@ -1601,7 +1608,7 @@ bool ChSystem::AdvanceDynamics() {
 
     // If needed, update everything. No need to update visualization assets here.
     if (!is_updated) {
-        Update(false);
+        Update(UpdateFlags::UPDATE_ALL & ~UpdateFlags::VISUAL_ASSETS);
     }
 
     // Re-wake the bodies that cannot sleep because they are in contact with
@@ -1609,7 +1616,7 @@ bool ChSystem::AdvanceDynamics() {
     ManageSleepingBodies();
 
     // Prepare lists of variables and constraints.
-    DescriptorPrepareInject(*descriptor);
+    DescriptorPrepareInject();
 
     // No need to update counts and offsets, as already done by the above call (in ChSystemDescriptor::EndInsertion)
     ////descriptor->UpdateCountsAndOffsets();
@@ -1704,10 +1711,10 @@ AssemblyAnalysis::ExitFlag ChSystem::DoAssembly(int action,
     setupcount = 0;
 
     Setup();
-    Update(true);
+    Update(UpdateFlags::UPDATE_ALL);
 
     // Prepare lists of variables and constraints
-    DescriptorPrepareInject(*descriptor);
+    DescriptorPrepareInject();
 
     ChAssemblyAnalysis assembling(*this);
     assembling.SetMaxAssemblyIters(max_num_iterationsNR);
@@ -1737,7 +1744,7 @@ AssemblyAnalysis::ExitFlag ChSystem::DoStepKinematics(double step_size) {
     step = step_size;
     ch_time += step_size;
 
-    Update(true);
+    Update(UpdateFlags::UPDATE_ALL);
     AssemblyAnalysis::ExitFlag exit_flag = DoAssembly(AssemblyAnalysis::Level::FULL);
 
     return exit_flag;
@@ -1785,9 +1792,9 @@ bool ChSystem::DoStaticAnalysis(ChStaticAnalysis& analysis) {
     setupcount = 0;
 
     Setup();
-    Update(true);
+    Update(UpdateFlags::UPDATE_ALL);
 
-    DescriptorPrepareInject(*descriptor);
+    DescriptorPrepareInject();
     analysis.SetIntegrable(this);
     analysis.StaticAnalysis();
 
@@ -1807,7 +1814,7 @@ bool ChSystem::DoStaticLinear() {
     setupcount = 0;
 
     Setup();
-    Update(true);
+    Update(UpdateFlags::UPDATE_ALL);
 
     // Overwrite solver parameters (only if iterative)
     int new_max_iters = 300;
@@ -1818,7 +1825,7 @@ bool ChSystem::DoStaticLinear() {
     }
 
     // Prepare lists of variables and constraints.
-    DescriptorPrepareInject(*descriptor);
+    DescriptorPrepareInject();
 
     // Perform analysis
     ChStaticLinearAnalysis analysis;
@@ -1867,7 +1874,7 @@ bool ChSystem::DoStaticNonlinear(int nsteps, bool verbose) {
     setupcount = 0;
 
     Setup();
-    Update(true);
+    Update(UpdateFlags::UPDATE_ALL);
 
     // Overwrite solver parameters (only if iterative)
     int new_max_iters = 300;
@@ -1878,7 +1885,7 @@ bool ChSystem::DoStaticNonlinear(int nsteps, bool verbose) {
     }
 
     // Prepare lists of variables and constraints.
-    DescriptorPrepareInject(*descriptor);
+    DescriptorPrepareInject();
 
     // Perform analysis
     ChStaticNonLinearAnalysis analysis;
@@ -1911,7 +1918,7 @@ bool ChSystem::DoStaticNonlinearRheonomic(
     setupcount = 0;
 
     Setup();
-    Update(true);
+    Update(UpdateFlags::UPDATE_ALL);
 
     // Overwrite solver parameters (only if iterative)
     int new_max_iters = 300;
@@ -1922,7 +1929,7 @@ bool ChSystem::DoStaticNonlinearRheonomic(
     }
 
     // Prepare lists of variables and constraints.
-    DescriptorPrepareInject(*descriptor);
+    DescriptorPrepareInject();
 
     // Perform analysis
     ChStaticNonLinearRheonomicAnalysis analysis;
@@ -2068,7 +2075,7 @@ void ChSystem::ArchiveIn(ChArchiveIn& archive_in) {
     // version number
     /*int version =*/archive_in.VersionRead<ChSystem>();
 
-    // deserialize unerlying assembly
+    // deserialize underlying assembly
     archive_in >> CHNVP(assembly);
 
     // stream in all member data:

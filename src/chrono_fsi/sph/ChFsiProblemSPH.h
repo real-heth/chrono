@@ -20,6 +20,7 @@
 #define CH_FSI_PROBLEM_SPH_H
 
 #include <cmath>
+#include <cstdint>
 #include <unordered_set>
 #include <unordered_map>
 
@@ -237,10 +238,10 @@ class CH_FSI_API ChFsiProblemSPH {
 
     /// Reconstruct surface from the current SPH particle data cloud.
     /// This function invokes the external `splashsurf` tool to generate a Wavefront OBJ mesh reconstructed from the
-    /// current positions of the SPH pareticles. If splashsurf was not found during configuration, this function is a
+    /// current positions of the SPH particles. If splashsurf was not found during configuration, this function is a
     /// no-op. The intermediate data file with SPH particle positions and the resulting mesh file are created in the
     /// specified directory and are named [name].json and [name].obj, respectively. If quiet=true, splashsurf console
-    /// output is supressed. This is a blocking operation which can be computationally expensive for large problems.
+    /// output is suppressed. This is a blocking operation which can be computationally expensive for large problems.
     /// See ChFsiSplashsurfSPH.
     void WriteReconstructedSurface(const std::string& dir, const std::string& name, bool quiet = false);
 
@@ -256,12 +257,22 @@ class CH_FSI_API ChFsiProblemSPH {
     ChFsiProblemSPH(double spacing, ChSystem* sys = nullptr);
 
     /// Hash function for a 3D integer grid coordinate.
+    static inline std::uint64_t mix64(std::uint64_t x) {
+        x += 0x9e3779b97f4a7c15ULL;
+        x = (x ^ (x >> 30)) * 0xbf58476d1ce4e5b9ULL;
+        x = (x ^ (x >> 27)) * 0x94d049bb133111ebULL;
+        return x ^ (x >> 31);
+    }
     struct CoordHash {
-        std::size_t operator()(const ChVector3i& p) const {
-            size_t h1 = std::hash<int>()(p.x());
-            size_t h2 = std::hash<int>()(p.y());
-            size_t h3 = std::hash<int>()(p.z());
-            return (h1 ^ (h2 << 1)) ^ h3;
+        std::size_t operator()(const ChVector3i& p) const noexcept {
+            // Pack the three ints into 64-bit lanes; mix each, then combine.
+            std::uint64_t x = static_cast<std::uint32_t>(p.x());
+            std::uint64_t y = static_cast<std::uint32_t>(p.y());
+            std::uint64_t z = static_cast<std::uint32_t>(p.z());
+            std::uint64_t h = mix64(x);
+            h ^= mix64(y) + 0x9e3779b97f4a7c15ULL + (h << 6) + (h >> 2);
+            h ^= mix64(z) + 0x9e3779b97f4a7c15ULL + (h << 6) + (h >> 2);
+            return static_cast<std::size_t>(h);
         }
     };
 
