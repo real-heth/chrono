@@ -5,13 +5,12 @@
 
 <div class="ce-info">
 这些教程主要面向 Chrono 的贡献者。
-</div> 
+</div>
 
 -   @subpage tutorial_doxygen
 
     简要介绍如何为代码添加注释以便自动生成 Doxygen API 文档。
 
 -   @subpage tutorial_writing_whitepapers
-	
-    解释如何编写关于 Chrono 理论方面的 LaTeX 文档。
 
+    解释如何编写关于 Chrono 理论方面的 LaTeX 文档。
