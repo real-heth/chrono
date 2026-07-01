@@ -66,6 +66,7 @@
 #include "chrono/physics/ChLinkRSDA.h"
 #include "chrono/physics/ChLoadsBody.h"
 #include "chrono/physics/ChLoadsNodeXYZ.h"
+#include "chrono/physics/ChLoadHydrodynamics.h"
 #include "chrono/physics/ChPhysicsItem.h"
 
 #include "chrono/geometry/ChTriangleMeshConnected.h"
@@ -504,10 +505,12 @@ Before adding a shared_ptr, mark as shared ptr all its inheritance tree in the m
 %DefSharedPtrDynamicCast(chrono::vehicle,ChTire, ChPac02Tire)
 %DefSharedPtrDynamicCast(chrono::vehicle,ChTire, ChFialaTire)
 
+#ifdef CHRONO_FEA
 %DefSharedPtrDynamicCast(chrono::vehicle,ChTire, ChDeformableTire)
 %DefSharedPtrDynamicCast(chrono::vehicle,ChTire, ChANCFTire)
 %DefSharedPtrDynamicCast(chrono::vehicle,ChTire, ChFEATire)
 %DefSharedPtrDynamicCast(chrono::vehicle,ChTire, ChReissnerTire)
+#endif
 
 %DefSharedPtrDynamicCast(chrono::vehicle,ChEngine, ChEngineSimple)
 %DefSharedPtrDynamicCast(chrono::vehicle,ChEngine, ChEngineSimpleMap)

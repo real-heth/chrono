@@ -30,8 +30,6 @@
     #include "chrono_vsg/ChVisualSystemVSG.h"
 #endif
 
-#include "chrono_thirdparty/filesystem/path.h"
-
 using namespace chrono;
 
 // -----------------------------------------------------------------------------
@@ -139,12 +137,12 @@ int main(int argc, char* argv[]) {
     // Create output directory
     if (output_MBS || output_CFD) {
         std::string out_dir = GetChronoOutputPath() + "YAML_FSI";
-        if (!filesystem::create_directory(filesystem::path(out_dir))) {
+        if (!CreateOutputDirectory(std::filesystem::path(out_dir))) {
             std::cout << "Error creating directory " << out_dir << std::endl;
             return 1;
         }
         out_dir = out_dir + "/" + model_name;
-        if (!filesystem::create_directory(filesystem::path(out_dir))) {
+        if (!CreateOutputDirectory(std::filesystem::path(out_dir))) {
             std::cout << "Error creating directory " << out_dir << std::endl;
             return 1;
         }
@@ -174,12 +172,12 @@ int main(int argc, char* argv[]) {
         }
 
         if (output_MBS && time >= output_frame_MBS / output_fps_MBS) {
-            parserMBS.SaveOutput(*sysMBS, output_frame_MBS);
+            parserMBS.WriteOutput(time, output_frame_MBS);
             output_frame_MBS++;
         }
 
         if (output_CFD && time >= output_frame_CFD / output_fps_CFD) {
-            parserCFD.SaveOutput(output_frame_CFD);
+            parserCFD.WriteOutput(time, output_frame_CFD);
             output_frame_CFD++;
         }
 

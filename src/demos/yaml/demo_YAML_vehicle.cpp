@@ -28,7 +28,6 @@
     #include "chrono_vehicle/tracked_vehicle/ChTrackedVehicleVisualSystemVSG.h"
 #endif
 
-#include "chrono_thirdparty/filesystem/path.h"
 #include "chrono_thirdparty/cxxopts/ChCLI.h"
 
 using namespace chrono;
@@ -119,19 +118,19 @@ int main(int argc, char* argv[]) {
     // Create output directory
     if (parser.Output()) {
         std::string out_dir = GetChronoOutputPath() + "YAML_VEHICLE";
-        if (!filesystem::create_directory(filesystem::path(out_dir))) {
+        if (!CreateOutputDirectory(std::filesystem::path(out_dir))) {
             std::cout << "Error creating directory " << out_dir << std::endl;
             return 1;
         }
         out_dir = out_dir + "/" + model_name;
-        if (!filesystem::create_directory(filesystem::path(out_dir))) {
+        if (!CreateOutputDirectory(std::filesystem::path(out_dir))) {
             std::cout << "Error creating directory " << out_dir << std::endl;
             return 1;
         }
         parser.SetOutputDir(out_dir);
 
         double out_step = 1.0 / parser.GetOutputFPS();
-        vehicle->SetOutput(parser.GetOutputType(), parser.GetOutputMode(), out_dir, model_name, out_step);
+        vehicle->SetOutput(parser.GetOutputFormat(), parser.GetOutputMode(), out_dir, model_name, out_step);
     }
 
     // Simulation loop

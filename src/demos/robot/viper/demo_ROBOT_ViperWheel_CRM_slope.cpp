@@ -39,7 +39,6 @@
     #include "chrono_fsi/sph/visualization/ChSphVisualizationVSG.h"
 #endif
 
-#include "chrono_thirdparty/filesystem/path.h"
 #include "chrono_thirdparty/cxxopts/ChCLI.h"
 
 #include "viper_wheel.h"
@@ -153,7 +152,7 @@ void CreateSolidPhase(ChFsiSystemSPH& sysFSI,
     trimesh->LoadWavefrontMesh(GetChronoDataFile(wheel_obj), false, true);
     trimesh->Transform(ChVector3d(0, 0, 0),
                        ChMatrix33<>(scale_ratio));  // scale to a different size
-    trimesh->RepairDuplicateVertexes(1e-9);         // if meshes are not watertight
+    trimesh->RepairDuplicateVertices(1e-9);         // if meshes are not watertight
 
     // Compute mass inertia from mesh
     double mmass;
@@ -207,7 +206,6 @@ void CreateSolidPhase(ChFsiSystemSPH& sysFSI,
 
     // Create wheel FSI body
     double inner_radius = wheel_radius;
-    double outer_radius = wheel_radius + grouser_height;
     auto bce = CreateWheelBCE(inner_radius, wheel_width - iniSpacing, grouser_height, grouser_wide, grouser_num,
                               iniSpacing, false);
     ChQuaternion<> wheel_Rot_bce = Q_ROTATE_Z_TO_Y;
@@ -331,8 +329,8 @@ int main(int argc, char* argv[]) {
     ChFsiFluidSystemSPH sysSPH;
 
 #ifdef NDEBUG
-    std::cout << "Disable cuda error check in RELEASE mode" << std::endl;
-    sysSPH.EnableCudaErrorCheck(false);
+    std::cout << "Disable GPU error check in RELEASE mode" << std::endl;
+    sysSPH.EnableGPUErrorCheck(false);
 #endif
     ChFsiSystemSPH sysFSI(&sysMBS, &sysSPH);
 
@@ -399,7 +397,7 @@ int main(int argc, char* argv[]) {
 
     if (params.output) {
         // Create output directories
-        if (!filesystem::create_directory(filesystem::path(out_dir))) {
+        if (!CreateOutputDirectory(std::filesystem::path(out_dir))) {
             std::cerr << "Error creating directory " << out_dir << std::endl;
             return 1;
         }
@@ -413,7 +411,7 @@ int main(int argc, char* argv[]) {
         out_dir = ss.str();
 
         // Create output directories
-        if (!filesystem::create_directory(filesystem::path(out_dir))) {
+        if (!CreateOutputDirectory(std::filesystem::path(out_dir))) {
             std::cerr << "Error creating directory " << out_dir << std::endl;
             return 1;
         }
@@ -425,19 +423,19 @@ int main(int argc, char* argv[]) {
         std::cout << "Output directory: " << out_dir << std::endl;
 
         // Create output directories
-        if (!filesystem::create_directory(filesystem::path(out_dir))) {
+        if (!CreateOutputDirectory(std::filesystem::path(out_dir))) {
             std::cerr << "Error creating directory " << out_dir << std::endl;
             return 1;
         }
-        if (!filesystem::create_directory(filesystem::path(out_dir + "/particles"))) {
+        if (!CreateOutputDirectory(std::filesystem::path(out_dir + "/particles"))) {
             std::cerr << "Error creating directory " << out_dir + "/particles" << std::endl;
             return 1;
         }
-        if (!filesystem::create_directory(filesystem::path(out_dir + "/fsi"))) {
+        if (!CreateOutputDirectory(std::filesystem::path(out_dir + "/fsi"))) {
             std::cerr << "Error creating directory " << out_dir + "/fsi" << std::endl;
             return 1;
         }
-        if (!filesystem::create_directory(filesystem::path(out_dir + "/vtk"))) {
+        if (!CreateOutputDirectory(std::filesystem::path(out_dir + "/vtk"))) {
             std::cerr << "Error creating directory " << out_dir + "/vtk" << std::endl;
             return 1;
         }
@@ -445,7 +443,7 @@ int main(int argc, char* argv[]) {
 
     // Create directory for snapshots if enabled
     if (params.snapshots) {
-        if (!filesystem::create_directory(filesystem::path(out_dir + "snapshots"))) {
+        if (!CreateOutputDirectory(std::filesystem::path(out_dir + "snapshots"))) {
             std::cerr << "Error creating directory " << out_dir + "snapshots" << std::endl;
             return 1;
         }
@@ -561,7 +559,7 @@ int main(int argc, char* argv[]) {
     // Save wheel mesh
     ChTriangleMeshConnected wheel_mesh;
     wheel_mesh.LoadWavefrontMesh(GetChronoDataFile(wheel_obj), false, true);
-    wheel_mesh.RepairDuplicateVertexes(1e-9);
+    wheel_mesh.RepairDuplicateVertices(1e-9);
 
     // Write the information into a txt file
     std::ofstream myFile;
@@ -614,7 +612,7 @@ int main(int argc, char* argv[]) {
         visVSG->SetWindowTitle("Chrono::CRM single wheel test");
         visVSG->SetWindowSize(1280, 960);
         visVSG->AddCamera(ChVector3d(-bxDim / 2. + 1, -5 * byDim, 5 * bzDim), ChVector3d(-bxDim / 2. + 1, 0., 0));
-        visVSG->SetLightIntensity(0.9);
+        visVSG->SetLightIntensity(0.9f);
         visVSG->SetLightDirection(-CH_PI_2, CH_PI / 6);
 
         visVSG->Initialize();

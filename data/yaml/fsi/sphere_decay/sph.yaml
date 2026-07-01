@@ -1,4 +1,4 @@
-chrono-version: 9.0
+chrono-version: 10.0
 tyype: SPH
 
 model:  "model_sph.yaml"
@@ -8,7 +8,7 @@ simulation:
   end_time: 100
   
 output:
-    type: NONE
+    format: NONE
     mode: FRAMES
     fps: 20
 

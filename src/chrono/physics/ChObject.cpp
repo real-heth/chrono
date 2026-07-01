@@ -18,7 +18,9 @@
 namespace chrono {
 
 ChObj::ChObj() : m_tag(-1), ChTime(0) {
+    // Create a unique identifier and set a default object name
     m_identifier = GenerateUniqueIdentifier();
+    m_name = std::string("_obj_") + std::to_string(m_identifier);
 }
 
 ChObj::ChObj(const ChObj& other) {
@@ -60,6 +62,7 @@ std::shared_ptr<ChVisualShape> ChObj::GetVisualShape(unsigned int i) const {
     return vis_model_instance->GetModel()->GetShape(i);
 }
 
+#ifdef CHRONO_FEA
 void ChObj::AddVisualShapeFEA(std::shared_ptr<ChVisualShapeFEA> shape) {
     shape->obj = this;
     if (!vis_model_instance) {
@@ -74,6 +77,7 @@ std::shared_ptr<ChVisualShapeFEA> ChObj::GetVisualShapeFEA(unsigned int i) const
         return nullptr;
     return vis_model_instance->GetModel()->GetShapeFEA(i);
 }
+#endif
 
 void ChObj::AddCamera(std::shared_ptr<ChCamera> camera) {
     camera->m_owner = this;

@@ -125,6 +125,7 @@ set(CV_BASE_FILES
     ChVehicle.cpp
     ChVehicleDataPath.h
     ChVehicleDataPath.cpp
+    ChVehicleOutput.h
     ChVehicleVisualSystem.h
     ChVehicleVisualSystem.cpp
     ChWorldFrame.cpp
@@ -224,9 +225,13 @@ set(CV_TERRAIN_FILES
     terrain/SCMTerrain.cpp
     terrain/GranularTerrain.h
     terrain/GranularTerrain.cpp
-    terrain/FEATerrain.h
-    terrain/FEATerrain.cpp
 )
+if(CH_ENABLE_MODULE_FEA)
+    set(CV_TERRAIN_FILES ${CV_TERRAIN_FILES}
+        terrain/FEATerrain.h
+        terrain/FEATerrain.cpp
+    )
+endif()
 if(CH_USE_OPENCRG)
     set(CV_TERRAIN_FILES ${CV_TERRAIN_FILES}
         terrain/CRGTerrain.h
@@ -250,8 +255,8 @@ set(CV_UTILS_FILES
     utils/ChAdaptiveSpeedController.cpp
     utils/ChVehiclePath.h
     utils/ChVehiclePath.cpp
-    utils/ChUtilsJSON.h
-    utils/ChUtilsJSON.cpp
+    utils/ChVehicleUtilsJSON.h
+    utils/ChVehicleUtilsJSON.cpp
 )
 source_group("utils" FILES ${CV_UTILS_FILES})
 
@@ -488,17 +493,9 @@ set(CV_WV_TIRE_FILES
     wheeled_vehicle/tire/ChTMsimpleTire.cpp
     wheeled_vehicle/tire/ChTMeasyTire.h
     wheeled_vehicle/tire/ChTMeasyTire.cpp
-    wheeled_vehicle/tire/ChDeformableTire.h
-    wheeled_vehicle/tire/ChDeformableTire.cpp
-    wheeled_vehicle/tire/ChANCFTire.h
-    wheeled_vehicle/tire/ChANCFTire.cpp
-    wheeled_vehicle/tire/ChReissnerTire.h
-    wheeled_vehicle/tire/ChReissnerTire.cpp
-    wheeled_vehicle/tire/ChFEATire.h
-    wheeled_vehicle/tire/ChFEATire.cpp
     wheeled_vehicle/tire/ChPac02Tire.h
     wheeled_vehicle/tire/ChPac02Tire.cpp
-
+    #
     wheeled_vehicle/tire/RigidTire.h
     wheeled_vehicle/tire/RigidTire.cpp
     wheeled_vehicle/tire/Pac89Tire.h
@@ -509,19 +506,32 @@ set(CV_WV_TIRE_FILES
     wheeled_vehicle/tire/TMeasyTire.cpp
     wheeled_vehicle/tire/TMsimpleTire.h
     wheeled_vehicle/tire/TMsimpleTire.cpp
-    wheeled_vehicle/tire/ReissnerTire.h
-    wheeled_vehicle/tire/ReissnerTire.cpp
-    wheeled_vehicle/tire/ANCFTire.h
-    wheeled_vehicle/tire/ANCFTire.cpp
-    wheeled_vehicle/tire/FEATire.h
-    wheeled_vehicle/tire/FEATire.cpp
-    wheeled_vehicle/tire/ANCFToroidalTire.h
-    wheeled_vehicle/tire/ANCFToroidalTire.cpp
-    wheeled_vehicle/tire/ReissnerToroidalTire.h
-    wheeled_vehicle/tire/ReissnerToroidalTire.cpp
     wheeled_vehicle/tire/Pac02Tire.h
     wheeled_vehicle/tire/Pac02Tire.cpp
 )
+if(CH_ENABLE_MODULE_FEA)
+    set(CV_WV_TIRE_FILES ${CV_WV_TIRE_FILES}
+        wheeled_vehicle/tire/ChDeformableTire.h
+        wheeled_vehicle/tire/ChDeformableTire.cpp
+        wheeled_vehicle/tire/ChANCFTire.h
+        wheeled_vehicle/tire/ChANCFTire.cpp
+        wheeled_vehicle/tire/ChReissnerTire.h
+        wheeled_vehicle/tire/ChReissnerTire.cpp
+        wheeled_vehicle/tire/ChFEATire.h
+        wheeled_vehicle/tire/ChFEATire.cpp
+        #
+        wheeled_vehicle/tire/ReissnerTire.h
+        wheeled_vehicle/tire/ReissnerTire.cpp
+        wheeled_vehicle/tire/ANCFTire.h
+        wheeled_vehicle/tire/ANCFTire.cpp
+        wheeled_vehicle/tire/FEATire.h
+        wheeled_vehicle/tire/FEATire.cpp
+        wheeled_vehicle/tire/ANCFToroidalTire.h
+        wheeled_vehicle/tire/ANCFToroidalTire.cpp
+        wheeled_vehicle/tire/ReissnerToroidalTire.h
+        wheeled_vehicle/tire/ReissnerToroidalTire.cpp
+    )
+endif()
 source_group("wheeled_vehicle\\tire" FILES ${CV_WV_TIRE_FILES})
 
 set(CV_WV_VEHICLE_FILES
@@ -657,18 +667,23 @@ set(CV_TV_TRACKSHOE_FILES
     tracked_vehicle/track_shoe/ChTrackShoeBand.cpp
     tracked_vehicle/track_shoe/ChTrackShoeBandBushing.h
     tracked_vehicle/track_shoe/ChTrackShoeBandBushing.cpp
-    tracked_vehicle/track_shoe/ChTrackShoeBandANCF.h
-    tracked_vehicle/track_shoe/ChTrackShoeBandANCF.cpp
-
+    #
     tracked_vehicle/track_shoe/TrackShoeSinglePin.h
     tracked_vehicle/track_shoe/TrackShoeSinglePin.cpp
     tracked_vehicle/track_shoe/TrackShoeDoublePin.h
     tracked_vehicle/track_shoe/TrackShoeDoublePin.cpp
     tracked_vehicle/track_shoe/TrackShoeBandBushing.h
     tracked_vehicle/track_shoe/TrackShoeBandBushing.cpp
-    tracked_vehicle/track_shoe/TrackShoeBandANCF.h
-    tracked_vehicle/track_shoe/TrackShoeBandANCF.cpp
 )
+if(CH_ENABLE_MODULE_FEA)
+    set(CV_TV_TRACKSHOE_FILES ${CV_TV_TRACKSHOE_FILES}
+        tracked_vehicle/track_shoe/ChTrackShoeBandANCF.h
+        tracked_vehicle/track_shoe/ChTrackShoeBandANCF.cpp
+        #
+        tracked_vehicle/track_shoe/TrackShoeBandANCF.h
+        tracked_vehicle/track_shoe/TrackShoeBandANCF.cpp
+    )
+endif()
 source_group("tracked_vehicle\\track_shoe" FILES ${CV_TV_TRACKSHOE_FILES})
 
 set(CV_TV_TRACKASSEMBLY_FILES
@@ -682,18 +697,23 @@ set(CV_TV_TRACKASSEMBLY_FILES
     tracked_vehicle/track_assembly/ChTrackAssemblyBand.cpp
     tracked_vehicle/track_assembly/ChTrackAssemblyBandBushing.h
     tracked_vehicle/track_assembly/ChTrackAssemblyBandBushing.cpp
-    tracked_vehicle/track_assembly/ChTrackAssemblyBandANCF.h
-    tracked_vehicle/track_assembly/ChTrackAssemblyBandANCF.cpp
-
+    #
     tracked_vehicle/track_assembly/TrackAssemblySinglePin.h
     tracked_vehicle/track_assembly/TrackAssemblySinglePin.cpp
     tracked_vehicle/track_assembly/TrackAssemblyDoublePin.h
     tracked_vehicle/track_assembly/TrackAssemblyDoublePin.cpp
     tracked_vehicle/track_assembly/TrackAssemblyBandBushing.h
     tracked_vehicle/track_assembly/TrackAssemblyBandBushing.cpp
-    tracked_vehicle/track_assembly/TrackAssemblyBandANCF.h
-    tracked_vehicle/track_assembly/TrackAssemblyBandANCF.cpp
 )
+if(CH_ENABLE_MODULE_FEA)
+    set(CV_TV_TRACKASSEMBLY_FILES ${CV_TV_TRACKASSEMBLY_FILES}
+        tracked_vehicle/track_assembly/ChTrackAssemblyBandANCF.h
+        tracked_vehicle/track_assembly/ChTrackAssemblyBandANCF.cpp
+        #
+        tracked_vehicle/track_assembly/TrackAssemblyBandANCF.h
+        tracked_vehicle/track_assembly/TrackAssemblyBandANCF.cpp
+    )
+endif()
 source_group("tracked_vehicle\\track_assembly" FILES ${CV_TV_TRACKASSEMBLY_FILES})
 
 set(CV_TV_TEST_RIG_FILES
@@ -981,11 +1001,10 @@ if(CH_ENABLE_MODULE_VSG)
 endif()
 
 #-------------------------------------------------------------------------------
-# Trigger CMake for vehicle cosimulation
+# Trigger CMake for vehicle co-simulation
 #-------------------------------------------------------------------------------
 
-option(CH_ENABLE_MODULE_VEHICLE_COSIM "Build the Chrono vehicle cosimulation library" TRUE)
-mark_as_advanced(FORCE CH_ENABLE_MODULE_VEHICLE_COSIM)
+option(CH_ENABLE_MODULE_VEHICLE_COSIM "Build the Chrono vehicle co-simulation library" TRUE)
 if(CH_ENABLE_MODULE_VEHICLE_COSIM)
   add_subdirectory(cosim)
 endif()
@@ -1015,10 +1034,6 @@ install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/
         FILES_MATCHING PATTERN "*.h")
 
 # Install 3rd party headers       
-install(DIRECTORY ${CMAKE_SOURCE_DIR}/src/chrono_thirdparty/Easy_BMP
-        DESTINATION include/chrono_thirdparty
-        FILES_MATCHING PATTERN "*.h" PATTERN "*.cuh" PATTERN "*.hpp" PATTERN "*.inl")
-
 install(DIRECTORY ${CMAKE_SOURCE_DIR}/src/chrono_thirdparty/stb
         DESTINATION include/chrono_thirdparty
         FILES_MATCHING PATTERN "*.h" PATTERN "*.cuh" PATTERN "*.hpp" PATTERN "*.inl")

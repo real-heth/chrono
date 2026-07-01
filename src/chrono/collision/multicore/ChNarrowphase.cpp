@@ -29,6 +29,8 @@
 #include "chrono/ChConfig.h"
 #include <thrust/remove.h>
 #include <thrust/sort.h>
+#include <thrust/distance.h>
+#include <thrust/advance.h>
 #include <thrust/transform_reduce.h>
 #include <thrust/count.h>
 #include <thrust/iterator/constant_iterator.h>
@@ -387,7 +389,7 @@ void ChNarrowphase::ProcessRigidRigid() {
 
 inline int GridCoord(real x, real inv_bin_edge, real minimum) {
     real l = x - minimum;
-    int c = (int)Round(l * inv_bin_edge);
+    int c = (int)std::round(l * inv_bin_edge);
     return c;
 }
 

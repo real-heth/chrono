@@ -14,9 +14,9 @@ endif()
 
 message(STATUS "\n==== Chrono DEM module ====\n")
 
-# Return now if CUDA is not available
-if(NOT CHRONO_CUDA_FOUND)
-    message("Chrono::DEM requires CUDA, but CUDA was not found; disabling Chrono::DEM")
+# Return now if neither CUDA nor HIP is available
+if(NOT CHRONO_CUDA_FOUND AND NOT CHRONO_HIP_FOUND)
+    message("Chrono::DEM requires CUDA or HIP, but neither backend was found; disabling Chrono::DEM")
     set(CH_ENABLE_MODULE_DEM OFF CACHE BOOL "Enable the Chrono::DEM module" FORCE)
     return()
 endif()
@@ -28,7 +28,11 @@ if(EIGEN3_VERSION VERSION_LESS "3.3.6")
     return()
 endif()
 
-message(STATUS "Chrono CUDA architectures: ${CHRONO_CUDA_ARCHITECTURES}")
+if(CHRONO_HIP_FOUND)
+  message(STATUS "Chrono HIP architectures: ${CHRONO_HIP_ARCHITECTURES}")
+else()
+  message(STATUS "Chrono CUDA architectures: ${CHRONO_CUDA_ARCHITECTURES}")
+endif()
 
 # ----------------------------------------------------------------------------
 # Generate and install configuration header file.
@@ -67,19 +71,33 @@ set(DEM_PHYSICS_FILES
     )
 source_group(physics FILES ${DEM_PHYSICS_FILES})
 
-set(DEM_CUDA_FILES
-    cuda/ChDem_SMC.cu
-    cuda/ChDem_SMC.cuh
-    cuda/ChDem_SMC_trimesh.cu
-    cuda/ChDem_SMC_trimesh.cuh
-    cuda/ChDemCollision.cuh
-    cuda/ChDemBoundaryConditions.cuh
-    cuda/ChDemHelpers.cuh
-    cuda/ChDemBoxTriangle.cuh
-    cuda/ChDemCUDAalloc.hpp
-    cuda/ChCudaMathUtils.cuh
+set(DEM_GPU_FILES
+    gpu/ChDemSMC.cu
+    gpu/ChDemSMC.cuh
+    gpu/ChDemSMCtrimesh.cu
+    gpu/ChDemSMCtrimesh.cuh
+    gpu/ChDemCollision.cuh
+    gpu/ChDemBoundaryConditions.cuh
+    gpu/ChDemHelpers.cuh
+    gpu/ChDemBoxTriangle.cuh
+    gpu/ChDemGpuAlloc.h
+    gpu/ChDemGpuMathUtils.cuh
+    ../chrono/gpu/ChGpuRuntime.h
+    ../chrono/gpu/ChGpuPrimitives.h
     )
-source_group(cuda FILES ${DEM_CUDA_FILES})
+source_group(gpu FILES ${DEM_GPU_FILES})
+
+# ------------------------------------------
+
+set(DEM_GPU_SOURCE_FILES
+    gpu/ChDemSMC.cu
+    gpu/ChDemSMCtrimesh.cu
+    )
+if(CHRONO_HIP_FOUND)
+    set_source_files_properties(${DEM_GPU_SOURCE_FILES} PROPERTIES LANGUAGE HIP)
+endif()
+
+# --------------- DEM UTILITIES
 
 set(DEM_UTILITY_FILES
     utils/ChDemUtilities.h
@@ -120,7 +138,7 @@ message(STATUS "Add Chrono_dem library")
 add_library(Chrono_dem
             ${DEM_BASE_FILES}
             ${DEM_PHYSICS_FILES}
-            ${DEM_CUDA_FILES}
+            ${DEM_GPU_FILES}
             ${DEM_UTILITY_FILES}
             ${DEM_CONFIG_FILE}
 )
@@ -138,24 +156,49 @@ if(MSVC)
 endif()
 
 if(MSVC)
-  target_compile_options(Chrono_dem PRIVATE $<$<COMPILE_LANGUAGE:CXX>:/wd4996>)  # deprecated function or class member
-  target_compile_options(Chrono_dem PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler=/wd4996>) # CUDA Deprecation: The type will be removed in the next major release
-  target_compile_options(Chrono_dem PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler=/wd4100>) # CUDA unreferenced formal parameter
+  target_compile_options(Chrono_dem PRIVATE $<$<COMPILE_LANGUAGE:CXX>:/wd4996>)
+  target_compile_options(Chrono_dem PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler=/wd4996>)
+  target_compile_options(Chrono_dem PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler=/wd4100>)
 endif()
 
-target_compile_options(Chrono_dem PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:-Wno-deprecated-gpu-targets>)
+if(CHRONO_CUDA_FOUND)
+  target_compile_options(Chrono_dem PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:-Wno-deprecated-gpu-targets>)
+  target_compile_definitions(Chrono_dem PUBLIC CHRONO_USE_CUDA)
+endif()
 
 target_compile_definitions(Chrono_dem PRIVATE $<$<COMPILE_LANGUAGE:CXX>:CH_API_COMPILE_DEM>)
+if(CHRONO_HIP_FOUND)
+  target_compile_definitions(Chrono_dem PUBLIC CHRONO_USE_HIP __HIP_PLATFORM_AMD__)
+endif()
 
 target_link_libraries(Chrono_dem PRIVATE Chrono_core)
 
-target_link_libraries(Chrono_dem PUBLIC CUDA::cudart_static)
-target_link_libraries(Chrono_dem PUBLIC CUDA::nvrtc)
-target_link_libraries(Chrono_dem PUBLIC CUDA::cuda_driver)
-target_link_libraries(Chrono_dem PUBLIC CUDA::cublas)
-target_link_libraries(Chrono_dem PUBLIC CUDA::cusparse)
-
-set_target_properties(Chrono_dem PROPERTIES CUDA_ARCHITECTURES ${CHRONO_CUDA_ARCHITECTURES})
+if(CHRONO_CUDA_FOUND)
+  target_link_libraries(Chrono_dem PUBLIC CUDA::cudart_static)
+  target_link_libraries(Chrono_dem PUBLIC CUDA::nvrtc)
+  target_link_libraries(Chrono_dem PUBLIC CUDA::cuda_driver)
+  target_link_libraries(Chrono_dem PUBLIC CUDA::cublas)
+  target_link_libraries(Chrono_dem PUBLIC CUDA::cusparse)
+  set_target_properties(Chrono_dem PROPERTIES CUDA_ARCHITECTURES ${CHRONO_CUDA_ARCHITECTURES})
+elseif(CHRONO_HIP_FOUND)
+  find_package(hip QUIET CONFIG HINTS "${CHRONO_ROCM_ROOT}")
+  if(TARGET hip::host)
+    target_link_libraries(Chrono_dem PUBLIC hip::host)
+  endif()
+  if(CHRONO_ROCM_ROOT AND EXISTS "${CHRONO_ROCM_ROOT}/include")
+    target_include_directories(Chrono_dem PUBLIC "${CHRONO_ROCM_ROOT}/include")
+  endif()
+  # Mixed CXX/HIP targets can leak HIP_ARCHITECTURES into ordinary CXX compilations
+  # (for example stb_image.cpp), which makes the host compiler see --offload-arch.
+  # Keep the target-level property disabled and pass the GPU arch flags only to real HIP TUs.
+  set_target_properties(Chrono_dem PROPERTIES HIP_ARCHITECTURES OFF)
+  if(NOT CHRONO_HIP_ARCHITECTURES STREQUAL "")
+    foreach(_chrono_hip_arch IN LISTS CHRONO_HIP_ARCHITECTURES)
+      target_compile_options(Chrono_dem PRIVATE $<$<COMPILE_LANGUAGE:HIP>:--offload-arch=${_chrono_hip_arch}>)
+      target_link_options(Chrono_dem PRIVATE $<$<LINK_LANGUAGE:HIP>:--offload-arch=${_chrono_hip_arch}>)
+    endforeach()
+  endif()
+endif()
 
 install(TARGETS Chrono_dem
         EXPORT ChronoTargets
@@ -192,11 +235,13 @@ if(CH_ENABLE_MODULE_VSG)
     target_link_libraries(Chrono_dem_vsg PRIVATE Chrono_core Chrono_dem)
     target_link_libraries(Chrono_dem_vsg PUBLIC Chrono_vsg)
 
-    target_link_libraries(Chrono_dem_vsg PRIVATE CUDA::cudart_static)
-    target_link_libraries(Chrono_dem_vsg PRIVATE CUDA::nvrtc)
-    target_link_libraries(Chrono_dem_vsg PRIVATE CUDA::cuda_driver)
-    target_link_libraries(Chrono_dem_vsg PRIVATE CUDA::cublas)
-    target_link_libraries(Chrono_dem_vsg PRIVATE CUDA::cusparse)
+    if(CHRONO_CUDA_FOUND)
+      target_link_libraries(Chrono_dem_vsg PRIVATE CUDA::cudart_static)
+      target_link_libraries(Chrono_dem_vsg PRIVATE CUDA::nvrtc)
+      target_link_libraries(Chrono_dem_vsg PRIVATE CUDA::cuda_driver)
+      target_link_libraries(Chrono_dem_vsg PRIVATE CUDA::cublas)
+      target_link_libraries(Chrono_dem_vsg PRIVATE CUDA::cusparse)
+    endif()
 
     install(TARGETS Chrono_dem_vsg
             EXPORT ChronoTargets

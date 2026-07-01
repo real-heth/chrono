@@ -18,8 +18,6 @@
 #include "chrono_parsers/yaml/ChParserMbsYAML.h"
 #include "chrono_parsers/yaml/ChParserCfdYAML.h"
 
-#include "chrono/assets/ChColormap.h"
-
 #include "chrono_fsi/tdpf/ChFsiSystemTDPF.h"
 #include "chrono_fsi/tdpf/ChFsiFluidSystemTDPF.h"
 
@@ -84,8 +82,8 @@ class ChApiParsers ChParserTdpfYAML : public ChParserCfdYAML {
 
     // --------------
 
-    /// Save simulation output results at the current time.
-    virtual void SaveOutput(int frame) override;
+    /// Write simulation output results at the current time.
+    virtual void WriteOutput(int frame, double time) override;
 
   private:  // ---- Data structures
     enum class WaveColoringType { NONE, HEIGHT, VELOCITY };
@@ -117,7 +115,6 @@ class ChApiParsers ChParserTdpfYAML : public ChParserCfdYAML {
     };
 
   private:
-    static ChColormap::Type ReadColorMapType(const YAML::Node& a);
     static WaveType ReadWaveType(const YAML::Node& a);
 #ifdef CHRONO_VSG
     static fsi::tdpf::ChTdpfVisualizationVSG::ColorMode ReadWaveColoringMode(const YAML::Node& a);

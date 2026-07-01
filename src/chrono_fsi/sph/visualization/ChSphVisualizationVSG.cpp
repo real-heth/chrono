@@ -23,6 +23,8 @@
 #include "chrono_fsi/sph/physics/SphDataManager.cuh"
 #include "chrono_fsi/sph/utils/SphUtilsTypeConvert.cuh"
 
+#undef MemoryBarrier
+
 #include "chrono_vsg/utils/ChDataUtilsVSG.h"
 #include "chrono_vsg/utils/ChShapeBuilderVSG.h"
 
@@ -211,7 +213,7 @@ ChSphVisualizationVSG::ChSphVisualizationVSG(ChFsiFluidSystemSPH* sysSPH)
 }
 
 ChSphVisualizationVSG::~ChSphVisualizationVSG() {
-    if (m_vsys) {
+    if (m_vsys && m_sysMBS->GetVisualSystem()) {
         auto& systems = m_vsys->GetSystems();
         auto index = std::find(systems.begin(), systems.end(), m_sysMBS);
         if (index != systems.end())

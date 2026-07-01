@@ -19,6 +19,8 @@
 ////#include <float.h>
 ////unsigned int fp_control_state = _controlfp(_EM_INEXACT, _MCW_EM);
 
+#include <filesystem>
+
 #include "chrono/ChConfig.h"
 #include "chrono/core/ChRealtimeStep.h"
 #include "chrono/assets/ChVisualSystem.h"
@@ -44,7 +46,6 @@
     #endif
 #endif
 
-#include "chrono_thirdparty/filesystem/path.h"
 #include "chrono_thirdparty/cxxopts/ChCLI.h"
 
 using namespace chrono;
@@ -200,12 +201,12 @@ bool RunMBS(const std::string& yaml_filename, std::string& out_dir, bool disable
 
     // Create output directory
     if (output) {
-        if (!filesystem::create_directory(filesystem::path(out_dir))) {
+        if (!CreateOutputDirectory(std::filesystem::path(out_dir))) {
             std::cout << "Error creating directory " << out_dir << std::endl;
             return false;
         }
         out_dir = out_dir + "/" + model_name;
-        if (!filesystem::create_directory(filesystem::path(out_dir))) {
+        if (!CreateOutputDirectory(std::filesystem::path(out_dir))) {
             std::cout << "Error creating directory " << out_dir << std::endl;
             return false;
         }
@@ -236,7 +237,7 @@ bool RunMBS(const std::string& yaml_filename, std::string& out_dir, bool disable
 
         if (output) {
             if (time >= output_frame / output_fps) {
-                parser.SaveOutput(*sys, output_frame);
+                parser.WriteOutput(time, output_frame);
                 output_frame++;
             }
         }
@@ -315,19 +316,19 @@ bool RunVEHICLE(const std::string& yaml_filename, std::string& out_dir, bool dis
 
     // Create output directory
     if (output) {
-        if (!filesystem::create_directory(filesystem::path(out_dir))) {
+        if (!CreateOutputDirectory(std::filesystem::path(out_dir))) {
             std::cout << "Error creating directory " << out_dir << std::endl;
             return false;
         }
         out_dir = out_dir + "/" + model_name;
-        if (!filesystem::create_directory(filesystem::path(out_dir))) {
+        if (!CreateOutputDirectory(std::filesystem::path(out_dir))) {
             std::cout << "Error creating directory " << out_dir << std::endl;
             return false;
         }
         parser.SetOutputDir(out_dir);
 
         double out_step = 1.0 / parser.GetOutputFPS();
-        vehicle->SetOutput(parser.GetOutputType(), parser.GetOutputMode(), out_dir, model_name, out_step);
+        vehicle->SetOutput(parser.GetOutputFormat(), parser.GetOutputMode(), out_dir, model_name, out_step);
     }
 
     // Simulation loop
@@ -445,12 +446,12 @@ bool RunFSI(const std::string& yaml_filename, std::string& out_dir, bool disable
 
     // Create output directory
     if (output_MBS || output_CFD) {
-        if (!filesystem::create_directory(filesystem::path(out_dir))) {
+        if (!CreateOutputDirectory(std::filesystem::path(out_dir))) {
             std::cout << "Error creating directory " << out_dir << std::endl;
             return false;
         }
         out_dir = out_dir + "/" + model_name;
-        if (!filesystem::create_directory(filesystem::path(out_dir))) {
+        if (!CreateOutputDirectory(std::filesystem::path(out_dir))) {
             std::cout << "Error creating directory " << out_dir << std::endl;
             return 1;
         }
@@ -480,12 +481,12 @@ bool RunFSI(const std::string& yaml_filename, std::string& out_dir, bool disable
         }
 
         if (output_MBS && time >= output_frame_MBS / output_fps_MBS) {
-            parserMBS.SaveOutput(*sysMBS, output_frame_MBS);
+            parserMBS.WriteOutput(time, output_frame_MBS);
             output_frame_MBS++;
         }
 
         if (output_CFD && time >= output_frame_CFD / output_fps_CFD) {
-            parserCFD.SaveOutput(output_frame_CFD);
+            parserCFD.WriteOutput(time, output_frame_CFD);
             output_frame_CFD++;
         }
 

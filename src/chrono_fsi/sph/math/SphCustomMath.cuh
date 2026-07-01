@@ -20,8 +20,9 @@
 #ifndef CH_SPH_CUSTOM_MATH_H
 #define CH_SPH_CUSTOM_MATH_H
 
-#include <cuda_runtime.h>
 #include <cmath>
+
+#include "chrono/gpu/ChGpuRuntime.h"
 
 #include "chrono_fsi/sph/ChFsiDataTypesSPH.h"
 
@@ -78,14 +79,14 @@ inline __host__ __device__ Real quintic(Real a) {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-// implementations of basic cuda types
+// implementations of basic GPU types
 ////////////////////////////////////////////////////////////////////////////////
 
 #if defined(__CUDACC_RTC__)
     #define __VECTOR_FUNCTIONS_DECL__ __host__ __device__
-#else /* !__CUDACC_RTC__ */
+#else
     #define __VECTOR_FUNCTIONS_DECL__ static __inline__ __host__ __device__
-#endif /* __CUDACC_RTC__ */
+#endif
 
 /// Make a vector with two unsigned integer elements.
 __VECTOR_FUNCTIONS_DECL__ uint2 make_uint2(unsigned int x, unsigned int y) {
@@ -1224,6 +1225,45 @@ __host__ __device__ inline Real4 make_Real4(Real3 a, Real w) {
 __host__ __device__ inline Real4 make_Real4(Real4 a) {
     return make_Real4(a.x, a.y, a.z, a.w);
 }
+
+// ----------------------------------------------------------------------------
+// Lightweight shorthand aliases
+// ----------------------------------------------------------------------------
+// Historically these convenience names were provided through
+// utils/SphUtilsDevice.cuh. That header also brings in thrust/device_vector and
+// rocPRIM, which is undesirable in ordinary host translation units during HIP
+// builds. Define the shorthand next to the math constructors instead so host
+// code keeps mR3/mI3/mR4 without depending on the heavy device-utility header.
+#ifndef mF2
+    #define mF2 make_float2
+#endif
+#ifndef mF3
+    #define mF3 make_float3
+#endif
+#ifndef mF4
+    #define mF4 make_float4
+#endif
+#ifndef mR2
+    #define mR2 make_Real2
+#endif
+#ifndef mR3
+    #define mR3 make_Real3
+#endif
+#ifndef mR4
+    #define mR4 make_Real4
+#endif
+#ifndef mI2
+    #define mI2 make_int2
+#endif
+#ifndef mI3
+    #define mI3 make_int3
+#endif
+#ifndef mI4
+    #define mI4 make_int4
+#endif
+#ifndef mU3
+    #define mU3 make_uint3
+#endif
 __host__ __device__ inline Real4 make_Real4(int4 a) {
     return make_Real4(Real(a.x), Real(a.y), Real(a.z), Real(a.w));
 }
@@ -1575,7 +1615,7 @@ __host__ __device__ inline Real3 cross(Real3 a, Real3 b) {
 }
 
 __host__ __device__ inline Real3 calc_triangle_normal(const Real3& a, const Real3& b, const Real3& c) {
-    return get_normalized(cross(b-a, c-b));
+    return get_normalized(cross(b - a, c - b));
 }
 
 __host__ __device__ inline Real sgn(Real a) {
